@@ -50,6 +50,21 @@ class UsageRecord(Base):
     api_key = relationship("APIKey", back_populates="usage_records")
 
 
+class OAuthGrant(Base):
+    """Short-lived PKCE authorization code. Single-use, expires in 5 min."""
+    __tablename__ = "oauth_grants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String, unique=True, index=True, nullable=False)
+    code_challenge = Column(String, nullable=False)
+    code_challenge_method = Column(String, default="S256")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    redirect_uri = Column(String, nullable=False)
+    client_id = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+
+
 class BlogView(Base):
     __tablename__ = "blog_views"
 

@@ -1,11 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+import base64, hashlib, secrets
 import httpx
 import models
 import schemas
 import auth as auth_utils
 from config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 from database import get_db
+from pydantic import BaseModel
+
+
+class OAuthAuthorizeRequest(BaseModel):
+    code_challenge: str
+    code_challenge_method: str = "S256"
+    client_id: str
+    redirect_uri: str
 
 router = APIRouter()
 
@@ -49,6 +59,75 @@ def login(body: schemas.UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=schemas.UserResponse)
 def me(current_user: models.User = Depends(auth_utils.get_current_user)):
     return current_user
+
+
+@router.post("/authorize")
+def authorize(
+    body: OAuthAuthorizeRequest,
+    current_user: models.User = Depends(auth_utils.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a short-lived PKCE authorization code for the CLI."""
+    code = secrets.token_urlsafe(32)
+    grant = models.OAuthGrant(
+        code=code,
+        code_challenge=body.code_challenge,
+        code_challenge_method=body.code_challenge_method,
+        user_id=current_user.id,
+        redirect_uri=body.redirect_uri,
+        client_id=body.client_id,
+        expires_at=datetime.utcnow() + timedelta(minutes=5),
+    )
+    db.add(grant)
+    db.commit()
+    return {"code": code}
+
+
+@router.post("/token")
+def token_exchange(
+    grant_type: str = Form(...),
+    code: str = Form(...),
+    code_verifier: str = Form(...),
+    redirect_uri: str = Form(...),
+    client_id: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Exchange a PKCE authorization code for an access token."""
+    if grant_type != "authorization_code":
+        raise HTTPException(status_code=400, detail="Unsupported grant type")
+
+    grant = db.query(models.OAuthGrant).filter(models.OAuthGrant.code == code).first()
+
+    if not grant:
+        raise HTTPException(status_code=400, detail="Invalid authorization code")
+    if grant.used:
+        raise HTTPException(status_code=400, detail="Authorization code already used")
+    if grant.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Authorization code expired")
+    if grant.redirect_uri != redirect_uri:
+        raise HTTPException(status_code=400, detail="redirect_uri mismatch")
+
+    # PKCE S256 verification
+    computed = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .rstrip(b"=")
+        .decode()
+    )
+    if computed != grant.code_challenge:
+        raise HTTPException(status_code=400, detail="code_verifier does not match code_challenge")
+
+    grant.used = True
+    db.commit()
+
+    user = db.query(models.User).filter(models.User.id == grant.user_id).first()
+    access_token = auth_utils.create_access_token({"sub": user.email})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": 3600,
+        "email": user.email,
+        "plan": user.plan,
+    }
 
 
 @router.post("/google-callback", response_model=schemas.TokenResponse)
