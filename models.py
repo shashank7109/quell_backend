@@ -48,3 +48,12 @@ class UsageRecord(Base):
 
     user = relationship("User", back_populates="usage_records")
     api_key = relationship("APIKey", back_populates="usage_records")
+
+
+class BlogView(Base):
+    __tablename__ = "blog_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    view_count = Column(Integer, default=0, nullable=False)
+    last_viewed_at = Column(DateTime, default=datetime.utcnow)

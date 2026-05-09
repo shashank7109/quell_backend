@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from database import engine, Base
-from routers import auth, api_keys, usage, billing
+from routers import auth, api_keys, usage, billing, blog
 from config import CORS_ORIGINS
 
 
@@ -36,6 +36,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(api_keys.router, prefix="/api/keys", tags=["api-keys"])
 app.include_router(usage.router, prefix="/api/usage", tags=["usage"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
+app.include_router(blog.router, prefix="/api/blog/views", tags=["blog"])
 
 
 @app.get("/")
