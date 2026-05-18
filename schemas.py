@@ -19,6 +19,7 @@ class UserResponse(BaseModel):
     email: str
     name: str
     plan: str
+    is_verified: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -28,6 +29,19 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
 
 
 class APIKeyCreate(BaseModel):

@@ -13,6 +13,9 @@ RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM = os.getenv("RESEND_FROM", "Quell <noreply@quelltest.com>")
+
 # Deployment URLs
 # FRONTEND_URL: your Vercel deployment URL (no trailing slash)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")

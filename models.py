@@ -16,6 +16,13 @@ class User(Base):
     google_id = Column(String, nullable=True, unique=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Email verification — Google users are pre-verified
+    is_verified = Column(Boolean, default=False, nullable=False)
+    # Single token slot reused for verify-email and reset-password (hashed)
+    email_token = Column(String, nullable=True, index=True)
+    email_token_purpose = Column(String, nullable=True)   # 'verify' | 'reset'
+    email_token_expires_at = Column(DateTime, nullable=True)
+
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
     usage_records = relationship("UsageRecord", back_populates="user", cascade="all, delete-orphan")
 

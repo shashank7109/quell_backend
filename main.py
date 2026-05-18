@@ -22,6 +22,14 @@ def _init_db(retries: int = 5, delay: float = 3.0) -> bool:
     _migrations = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR DEFAULT 'email'",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_token VARCHAR",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_token_purpose VARCHAR",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_token_expires_at TIMESTAMP",
+        # Back-fill: existing email users get is_verified=true (already in use)
+        "UPDATE users SET is_verified = true WHERE is_verified IS NULL OR (is_verified = false AND created_at < NOW() - INTERVAL '1 minute')",
+        # Google users are always verified
+        "UPDATE users SET is_verified = true WHERE auth_provider = 'google'",
     ]
     for attempt in range(1, retries + 1):
         try:
